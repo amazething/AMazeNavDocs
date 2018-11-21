@@ -102,7 +102,10 @@ lubuntu1404.img为你要修改后的镜像名。
 
     wget http://cdimage.ubuntu.com/ubuntu-core/releases/14.04.1/release/ubuntu-core-14.04-core-armhf.tar.gz
 
-或者直接去网上找到对应的版本下载 ### （2）解压Ubuntu Core rootfs tar包
+或者直接去网上找到对应的版本下载
+
+（2）解压Ubuntu Core rootfs tar包
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
