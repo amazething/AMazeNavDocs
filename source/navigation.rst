@@ -1273,6 +1273,249 @@ Body下的Create From Selected Markers，建立刚体。
 (5)修改参数（如LPE\_PN\_V)
 ``rosrun mavros mavparam set LPE_PN_V number``
 
+
+双目开发环境配置
+==================
+
+1.安装ROS
+---------
+
+在这里有两种方法可以安装ROS第一种较为简单，通过使用ros_install.sh脚本进行安装
+
+| kinetic版本的安装方法如下: cd ~ wget
+  https://raw.githubusercontent.com/oroca/oroca-ros-pkg/master/ros_install.sh
+  &&
+| chmod 755 ./ros_install.sh && bash ./ros_install.sh catkin_ws kinetic
+
+这种方法不是一定奏效，有时候国内访问raw.github,com也会出现一定的问题，所以这个方法有时可能行不通，这时候我们可以尝试第二种方法。
+
+可以在官网 http://wiki.ros.org/
+找到ROS的下载方式，这里有三种版本的ROS分别是第10\11\12代 kinetic lunar
+melodic
+分别对应ubuntu14、ubuntu16、ubuntu18其他linux发行版大概是同一时期的，请读者自己去查阅支持。
+
+这里以kinetic为例，因为它仍是大多数开源项目支持最好的版本，安装过程较为简单，不过未接触过Linux系统的同学可能会觉得有些难懂，
+
+第一步 配置源
+~~~~~~~~~~~~~
+
+在sources.list 中加入ros的官方源，可以用 sudo sh -c ‘echo “deb
+http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main” >
+/etc/apt/sources.list.d/ros-latest.list’ 命令实现。
+
+加入之后需要配置秘钥
+
+::
+
+   sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+
+第二步 安装
+~~~~~~~~~~~
+
+接下来 update源列表，使用 sudo apt-cache search ros-kinetic
+命令来查看是否可用的ros包。如果有的话，
+就可以使用apt-get这一命令直接安装了，在官网
+http://wiki.ros.org/kinetic/Installation/Ubuntu
+都有详细的解释，这里就不赘述了。
+
+这一过程中会从许多处安装依赖，这一过程会耗费很长时间，建议提前配置好国内的镜像，会加速这一过程，但是有一部分的资源需要从ros的仓库中取回，这一过程较慢。有条件的话可以使用vpn进行命令行的代理来继续下载，这一过程会快很多。
+如果有同学对vpn的搭建及linux下的使用感兴趣的话可以找我了解。
+这个过程基本就是等待下载，没有什么大的问题会出现。 ### 第三步
+初始化及环境变量配置
+
+但是结束之后记得要初始化rosdep
+
+::
+
+   sudo rosdep init
+   rosdep update
+
+环境变量的配置，通过这一配置就可以使用在ros中定义的诸多环境变量
+
+::
+
+   echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+   source ~/.bashrc
+
+如果使用的是其他版本的shell命令行，可能需要更改不同的文件，例如.zshrc等……
+
+安装依赖 sudo apt install python-rosinstall python-rosinstall-generator
+python-wstool build-essential
+
+2.安装开源项目及其依赖
+----------------------
+
+这里以MYNT-VINS-Mono与 MYNT-ORBSLAM2为例 两个项目都需要MYNT® EYE S
+SDK驱动，所以我们先在 https://github.com/slightech/MYNT-EYE-S-SDK
+安装S-SDK(因为实验室的硬件设备是支持S-SDK MYNT® EYE S SDK is a
+cross-platform library for MYNT® EYE Standard cameras.，而MYNT® EYE D
+SDK is a library for MYNT® EYE Depth cameras.)
+MYNT-S-SDK的安装及配置教程在
+
+https://mynt-eye-s-sdk-docs-zh-cn.readthedocs.io/zh_CN/latest/src/sdk/source_install_ubuntu.html
+这一网站上有详细的记录。 其中用到了github
+如果平台没有安装git的话需要安装（还有cmake等常用的软件）
+这里需要安装opencv，在ROS的安装过程中其实有安装opencv所以这一步可以跳过，但是如果后期出现opencv版本过低等问题还是需要重新安装opencv的，
+
+具体步骤就不赘述了，但是要记得clone之后要记得编译安装： make install
+编译样例 make samples 编译工具: make tools 安装脚本依赖: cd /tools/ sudo
+pip install -r requirements.txt
+这里需要用到pip，linux系统一般都自带python 如果没有pip的话可以使用 sudo
+apt-get install python-pip 来进行安装
+
+Install MYNT-EYE-VINS-Sample
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+   mkdir -p ~/catkin_ws/src
+   cd ~/catkin_ws/src
+   git clone -b mynteye https://github.com/slightech/MYNT-EYE-VINS-Sample.git
+   cd ..
+   catkin_make
+   source devel/setup.bash
+   echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
+   source ~/.bashrc
+
+vins-mono
+需要ceres-solver来进行非线性优化，计算机视觉中依据图像进行三维模型的构建,Ceres-solver
+是谷歌开发的一款用于非线性优化的库，在谷歌的开源激光雷达slam项目cartographer中被大量使用。可能还需要
+eigen3的支持，使用DBoW2来进行循环检测
+
+这里就有我曾经走过的弯路，就是在每个依赖的官方文档里有写清楚所依赖的文档，但是我当时没有仔细看，比较莽撞……下载了就直接开始编译安装
+
+这里讲一下
+在实验室的嵌入式开发中，我们经常会用到各种各样的开源项目，但是在不同的平台上，他们都能够成功的进行配置，这就是cmake的功劳。
+
+“CMake”这个名字是“Cross platform
+Make”的缩写。虽然名字中含有“make”，但是CMake和Unix上常见的“make”系统是分开的，而且更为高端。
+它可与原生建置环境结合使用，例如：make、苹果的Xcode与微软的Visual
+Studio。
+
+CMake是个一个开源的跨平台自动化建构系统，用来管理软件建置的程序，并不相依于某特定编译器。并可支持多层目录、多个应用程序与多个库。
+它用配置文件控制建构进程（build
+process）的方式和Unix的make相似，只是CMake的配置文件取名为CMakeLists.txt。CMake并不直接建构出最终的软件，而是产生标准的建构档（如Unix的Makefile或Windows
+Visual
+C++的projects/workspaces），然后再依一般的建构方式使用。这使得熟悉某个集成开发环境（IDE）的开发者可以用标准的方式建构他的软件，这种可以使用各平台的原生建构系统的能力是CMake和SCons等其他类似系统的区别之处。
+CMake配置文件(CMakeLists.txt)可设置源代码或目标程序库的路径、产生适配器（wrapper）、还可以用任意的顺序建构可执行文件。CMake支持in-place建构（二进档和源代码在同一个目录树中）和out-of-place建构（二进档在别的目录里），因此可以很容易从同一个源代码目录树中建构出多个二进档。CMake也支持静态与动态程序库的建构。
+
+| 使用cmake具有诸多好处，例如：
+| (1)
+  自动搜索你的软件所依赖的库、头文件，CMake在搜索的时候会将环境变量和注册表（Windows平台）也包含在内；
+  (2)
+  项目的构建目录和源码目录分离：也就是说可以在项目源码目录之外单独建立一个构建目录，用于存放构建过程中生成的文件
+  (3)
+  在配置阶段选择可选的组件：例如你的项目需要用到某个功能，有两个库都可以完成此功能，其中一个库体积大但是效率很高，另一个库体积小但是效率较低。通过CMake你可以方便的根据你项目的情况决定选择哪个库链接，例如Window平台，你可以选择体积大，效率高的库，而Android平台考虑到移动终端容量限制，你可以选择使用体积小，效率低一点的库。
+  (4)
+  很容易在共享库和静态库的构建上进行切换：你可以方便的指定是要构建共享库还是静态库，CMake在背后帮我们处理了构建共享库所需要的平台相关的链接器选项。
+  (5) CMake能自动生成项目文件的依赖关系，同时绝大多数平台上支持并行构建
+
+大多数开源项目就是带有CMakeLists.txt的这种项目，一般步骤就是在文件夹下创建一个
+\_build 文件夹，进入此文件夹后 执行 cmake .. 编译完成后进行 sudo make
+install
+如果没有错误则一般过程进行完毕，大概过程如此，具体项目需要查看项目下的Readme.md文档中的安装步骤进行
+
+但其实有更简便的方法，也会更快的方法，我也是之后才知道的……
+
+在linux下搜索需要的包:
+
+使用 sudo apt-cache search (+你需要查找的包的名称,例如eigen3)
+
+http://ceres-solver.org/installation.html
+这个网站给出了具体的安装方法，同时也给出了所有依赖的安装……
+
+::
+
+   git clone https://ceres-solver.googlesource.com/ceres-solver
+
+   # CMake
+   sudo apt-get install cmake
+   # google-glog + gflags
+   sudo apt-get install libgoogle-glog-dev
+   # BLAS & LAPACK
+   sudo apt-get install libatlas-base-dev
+   # Eigen3
+   sudo apt-get install libeigen3-dev
+   # SuiteSparse and CXSparse (optional)
+   # - If you want to build Ceres as a *static* library (the default)
+   #   you can use the SuiteSparse package in the main Ubuntu package
+   #   repository:
+   sudo apt-get install libsuitesparse-dev
+   # - However, if you want to build Ceres as a *shared* library, you must
+   #   add the following PPA:
+   sudo add-apt-repository ppa:bzindovic/suitesparse-bugfix-1319687
+   sudo apt-get update
+   sudo apt-get install libsuitesparse-dev
+   #依赖安装完成后就可开始ceres-solver的编译安装。
+
+   tar zxf ceres-solver-1.14.0.tar.gz
+   mkdir ceres-bin
+   cd ceres-bin
+   cmake ../ceres-solver-1.14.0
+   make -j3
+   make test
+   # Optionally install Ceres, it can also be exported using CMake which
+   # allows Ceres to be used without requiring installation, see the documentation
+   # for the EXPORT_BUILD_DIR option for more information.
+   make install
+
+这就是具体的安装过程了…
+在安装过程中如果遇到依赖缺乏问题就可以用我刚才的方法寻找源中的依赖，一般可以检查CMakeListerrors.txt
+和CMakeListoutput.txt 中的各种问题。
+
+Install the MYNT-ORBSLAM2
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+在安装过MYNT-S-SDK之后，我们在https://github.com/slightech/MYNT-EYE-ORB-SLAM2-Sample页面查看所需要的依赖，发现Prerequisites
+中需要的有：
+
+Pangolin来进行可视化的配置及用户接口的提供
+
+opencv 来操作图像和特性，最低要求至少是2.4.3版本
+当然这里是原项目，MYNT-ORBSLAM2项目的要求可能会更高一些
+
+DBoW2 and g2o来进行
+位置的识别和非线性优化，g2o是和ceres-solver类似的一种非线性优化库，这两个库被包含在项目的第三方包中，不需要用户安装，但是g2o要用到eigen3，具体安装方法在vins-mono项目中已经介绍过这里就不赘述了，配置完之后按照github中的步骤进行一步一步操作，这样就没什么大问题了。
+
+具体步骤如下：
+
+Stereo Examples 先校准摄像头这个在github里有链接指向具体的教程
+
+然后执行build.sh脚本
+
+::
+
+   chmod +x build.sh
+   ./build.sh
+
+run stereo sample using the follow type. ./Examples/Stereo/stereo_mynt_s
+./Vocabulary/ORBvoc.txt ./config/mynteye_s_stereo.yaml true
+
+用ROS构建摄像头节点
+
+首先添加ORB_SLAM2/Examples/ROS 到ROS_PACKAGE_PATH
+
+然后执行build_ros.sh 脚本
+
+::
+
+   chmod +x build_ros.sh
+   ./build_ros.sh
+
+然后运行Launch ORB_SLAM2 Stereo_ROS
+
+::
+
+   cd [path of mynteye-s-sdk]
+   make ros
+   source ./wrappers/ros/devel/setup.bash
+   roslaunch mynt_eye_ros_wrapper mynteye.launch
+
+然后运行ORB_SLAM2项目，开启另一个终端然后输入 rosrun ORB_SLAM2
+mynteye_s_stereo ./Vocabulary/ORBvoc.txt ./config/mynteye_s_stereo.yaml
+true /mynteye/left/image_raw /mynteye/right/image_raw
+
+
 license
 =======
 
